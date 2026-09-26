@@ -91,7 +91,7 @@ export function useRealtime(options: UseRealtimeOptions = {}) {
   useEffect(() => {
     if (!autoConnect || !session || !token) return
 
-    const socketUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
     
     socketRef.current = io(socketUrl, {
       path: '/api/socket',
