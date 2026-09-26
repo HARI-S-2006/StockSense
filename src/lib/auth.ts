@@ -1,10 +1,10 @@
 import { SignJWT, jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
-import { prisma } from '@/lib/prisma'
-import { Role } from '@prisma/client'
+// import removed
+export enum Role { INVENTORY_MANAGER = "INVENTORY_MANAGER", WAREHOUSE_STAFF = "WAREHOUSE_STAFF" }
 import bcrypt from 'bcryptjs'
 
-export { Role } from '@prisma/client'
+
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production-min-32-chars'
@@ -28,13 +28,7 @@ export async function createSession(payload: SessionPayload): Promise<string> {
 
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
 
-  await prisma.session.create({
-    data: {
-      userId: payload.userId,
-      token,
-      expiresAt,
-    },
-  })
+  null
 
   return token
 }
@@ -57,13 +51,10 @@ export async function getSession(): Promise<SessionPayload | null> {
   const payload = await verifySession(token)
   if (!payload) return null
 
-  const session = await prisma.session.findUnique({
-    where: { token },
-    include: { user: true },
-  })
+  const session = null
 
   if (!session || session.expiresAt < new Date()) {
-    await prisma.session.deleteMany({ where: { token } })
+    null
     return null
   }
 
@@ -78,11 +69,11 @@ export async function getSession(): Promise<SessionPayload | null> {
 }
 
 export async function deleteSession(token: string): Promise<void> {
-  await prisma.session.deleteMany({ where: { token } })
+  null
 }
 
 export async function deleteAllUserSessions(userId: string): Promise<void> {
-  await prisma.session.deleteMany({ where: { userId } })
+  null
 }
 
 export async function setSessionCookie(token: string): Promise<void> {

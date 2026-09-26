@@ -1,28 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getSession } from '@/lib/auth'
+import { verifyAuthToken } from '@/lib/auth-middleware'
 import { applyAdjustment } from '@/lib/inventory-engine'
-import { emitLedgerCreated, emitStockUpdated, emitAlertUpdated } from '@/lib/socket-server'
+import { emitLedgerCreated, emitStockUpdated, emitAlertUpdated } from '@/lib/realtime-server'
 
-async function requireAuth() {
-  const session = await getSession()
-  if (!session) {
-    return { error: NextResponse.json({ success: false, message: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 }), session: null }
+async function requireAuth(request: NextRequest) {
+  const auth = await verifyAuthToken(request)
+  if (!auth) {
+    return { error: NextResponse.json({ success: false, message: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 }), auth: null as any }
   }
-  return { error: null, session }
+  return { error: null, auth }
 }
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireAuth()
+  const auth = await requireAuth(request)
   if (auth.error) return auth.error
 
   try {
     const { id } = await params
 
-    const result = await applyAdjustment(id, auth.session!.userId)
+    const result = await applyAdjustment(id, auth.auth!.userId)
 
     if (!result.success) {
       return NextResponse.json(
@@ -33,10 +33,7 @@ export async function POST(
 
     const adjustment = await prisma.inventoryAdjustment.findUnique({
       where: { id },
-      include: { 
-        items: { include: { product: true } },
-        location: { include: { warehouse: true } }
-      },
+      include: { items: { include: { product: true } } },
     })
 
     if (adjustment) {
@@ -71,13 +68,12 @@ export async function POST(
               newQuantity: balance.quantity,
               locationName: adjustment.location.name,
               warehouseName: adjustment.location.warehouse.name,
-              userName: auth.session!.name,
+              userName: auth.auth!.name,
               createdAt: new Date().toISOString(),
             },
           })
         }
 
-        // Check alerts
         const product = await prisma.product.findUnique({ where: { id: item.productId } })
         if (product) {
           const balance = await prisma.stockBalance.findUnique({

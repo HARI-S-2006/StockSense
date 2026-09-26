@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { io, Socket } from 'socket.io-client'
-import { useSession } from '@/hooks/use-session'
 
 interface RealtimeEvents {
   'stock.updated': {
@@ -81,23 +80,18 @@ interface UseRealtimeOptions {
 
 export function useRealtime(options: UseRealtimeOptions = {}) {
   const { autoConnect = true, onConnect, onDisconnect, onError } = options
-  const { session, token } = useSession()
   const socketRef = useRef<Socket | null>(null)
   const [isConnected, setIsConnected] = useState(false)
   const [connectionError, setConnectionError] = useState<Error | null>(null)
   const handlersRef = useRef<Map<EventName, Set<Function>>>(new Map())
 
-  // Initialize socket connection
   useEffect(() => {
-    if (!autoConnect || !session || !token) return
+    if (!autoConnect) return
 
-    const socketUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000'
     
     socketRef.current = io(socketUrl, {
       path: '/api/socket',
-      auth: {
-        token,
-      },
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: 5,
@@ -125,7 +119,6 @@ export function useRealtime(options: UseRealtimeOptions = {}) {
       onError?.(error)
     })
 
-    // Forward all events to registered handlers
     socket.onAny((eventName: string, data: unknown) => {
       const handlers = handlersRef.current.get(eventName as EventName)
       if (handlers) {
@@ -144,22 +137,19 @@ export function useRealtime(options: UseRealtimeOptions = {}) {
       socketRef.current = null
       setIsConnected(false)
     }
-  }, [autoConnect, session])
+  }, [autoConnect, onConnect, onDisconnect, onError])
 
-  // Subscribe to events
-  const on = useCallback(<E extends EventName>(event: E, handler: EventHandler<E>) => {
+  const on = useCallback(<E extends EventName>(event: E, handler: (data: RealtimeEvents[E]) => void) => {
     if (!handlersRef.current.has(event)) {
       handlersRef.current.set(event, new Set())
     }
     handlersRef.current.get(event)!.add(handler)
 
-    // Return unsubscribe function
     return () => {
       handlersRef.current.get(event)?.delete(handler)
     }
   }, [])
 
-  // Subscribe to specific product updates
   const subscribeToProduct = useCallback((productId: string) => {
     socketRef.current?.emit('subscribe:product', productId)
   }, [])
@@ -168,22 +158,18 @@ export function useRealtime(options: UseRealtimeOptions = {}) {
     socketRef.current?.emit('unsubscribe:product', productId)
   }, [])
 
-  // Subscribe to warehouse updates
   const subscribeToWarehouse = useCallback((warehouseId: string) => {
     socketRef.current?.emit('subscribe:warehouse', warehouseId)
   }, [])
 
-  // Subscribe to dashboard updates
   const subscribeToDashboard = useCallback(() => {
     socketRef.current?.emit('subscribe:dashboard')
   }, [])
 
-  // Manual reconnect
   const reconnect = useCallback(() => {
     socketRef.current?.connect()
   }, [])
 
-  // Disconnect
   const disconnect = useCallback(() => {
     socketRef.current?.disconnect()
   }, [])
@@ -202,9 +188,8 @@ export function useRealtime(options: UseRealtimeOptions = {}) {
   }
 }
 
-// Specialized hooks for common use cases
 export function useStockUpdates(productId?: string) {
-  const [latestUpdate, setLatestUpdate] = useState<RealtimeEvents['stock.updated'] | null>(null)
+  const [latestUpdate, setLatestUpdate] = useState<any>(null)
   
   const { on } = useRealtime()
   
@@ -237,7 +222,7 @@ export function useDashboardUpdates() {
 }
 
 export function useLedgerUpdates() {
-  const [latestEntry, setLatestEntry] = useState<RealtimeEvents['ledger.created']['entry'] | null>(null)
+  const [latestEntry, setLatestEntry] = useState<any>(null)
   
   const { on } = useRealtime()
   
@@ -252,7 +237,7 @@ export function useLedgerUpdates() {
 }
 
 export function useAlertUpdates() {
-  const [latestAlert, setLatestAlert] = useState<RealtimeEvents['alert.updated'] | null>(null)
+  const [latestAlert, setLatestAlert] = useState<any>(null)
   
   const { on } = useRealtime()
   

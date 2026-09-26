@@ -1,27 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getSession } from '@/lib/auth'
+import { verifyAuthToken } from '@/lib/auth-middleware'
 import { cancelAdjustment } from '@/lib/inventory-engine'
 
-async function requireAuth() {
-  const session = await getSession()
-  if (!session) {
-    return { error: NextResponse.json({ success: false, message: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 }), session: null }
+async function requireAuth(request: NextRequest) {
+  const auth = await verifyAuthToken(request)
+  if (!auth) {
+    return { error: NextResponse.json({ success: false, message: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 }), auth: null as any }
   }
-  return { error: null, session }
+  return { error: null, auth }
 }
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireAuth()
+  const auth = await requireAuth(request)
   if (auth.error) return auth.error
 
   try {
     const { id } = await params
 
-    const result = await cancelAdjustment(id, auth.session!.userId)
+    const result = await cancelAdjustment(id, auth.auth!.userId)
 
     if (!result.success) {
       return NextResponse.json(

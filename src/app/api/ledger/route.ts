@@ -1,18 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getSession } from '@/lib/auth'
+import { verifyAuthToken } from '@/lib/auth-middleware'
 import { ledgerFiltersSchema } from '@/lib/validations'
 
-async function requireAuth() {
-  const session = await getSession()
-  if (!session) {
-    return { error: NextResponse.json({ success: false, message: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 }), session: null }
+async function requireAuth(request: NextRequest) {
+  const auth = await verifyAuthToken(request)
+  if (!auth) {
+    return { error: NextResponse.json({ success: false, message: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 }), auth: null as any }
   }
-  return { error: null, session }
+  return { error: null, auth }
 }
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAuth()
+  const auth = await requireAuth(request)
   if (auth.error) return auth.error
 
   try {
@@ -39,7 +39,9 @@ export async function GET(request: NextRequest) {
     if (documentNumber) where.documentNumber = { contains: documentNumber, mode: 'insensitive' }
     if (userId) where.userId = userId
     if (dateFrom || dateTo) {
-      where.createdAt = { gte: dateFrom ? new Date(dateFrom) : undefined, lte: dateTo ? new Date(dateTo) : undefined }
+      where.createdAt = {}
+      if (dateFrom) where.createdAt.gte = new Date(dateFrom)
+      if (dateTo) where.createdAt.lte = new Date(dateTo)
     }
 
     const [entries, total] = await Promise.all([

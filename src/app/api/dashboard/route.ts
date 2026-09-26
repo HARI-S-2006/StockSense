@@ -1,18 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getSession } from '@/lib/auth'
+import { verifyAuthToken } from '@/lib/auth-middleware'
 import { dashboardFiltersSchema } from '@/lib/validations'
 
-async function requireAuth() {
-  const session = await getSession()
-  if (!session) {
-    return { error: NextResponse.json({ success: false, message: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 }), session: null }
+async function requireAuth(request: NextRequest) {
+  const auth = await verifyAuthToken(request)
+  if (!auth) {
+    return { error: NextResponse.json({ success: false, message: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 }), auth: null as any }
   }
-  return { error: null, session }
+  return { error: null, auth }
 }
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAuth()
+  const auth = await requireAuth(request)
   if (auth.error) return auth.error
 
   try {
@@ -20,11 +20,9 @@ export async function GET(request: NextRequest) {
     const warehouseId = searchParams.get('warehouseId') || ''
     const categoryId = searchParams.get('categoryId') || ''
 
-    // Build base where clause for products
     const productWhere: Record<string, unknown> = { isActive: true }
     if (categoryId) productWhere.categoryId = categoryId
 
-    // Get all products with stock balances
     const products = await prisma.product.findMany({
       where: productWhere,
       include: {
@@ -36,7 +34,6 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    // Calculate KPIs
     let totalProductsInStock = 0
     let lowStockItems = 0
     let outOfStockItems = 0
@@ -48,7 +45,6 @@ export async function GET(request: NextRequest) {
       else if (totalStock <= product.reorderLevel) lowStockItems++
     }
 
-    // Pending receipts
     const pendingReceipts = await prisma.receipt.count({
       where: {
         status: { in: ['DRAFT', 'WAITING', 'READY'] },
@@ -56,7 +52,6 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    // Pending deliveries
     const pendingDeliveries = await prisma.deliveryOrder.count({
       where: {
         status: { in: ['DRAFT', 'WAITING', 'READY'] },
@@ -64,7 +59,6 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    // Pending transfers
     const pendingTransfers = await prisma.internalTransfer.count({
       where: {
         status: { in: ['DRAFT', 'WAITING', 'READY'] },
@@ -75,7 +69,6 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    // Low stock alerts
     const lowStockProducts = products
       .map((p) => {
         const totalStock = p.stockBalances.reduce((sum, b) => sum + b.quantity, 0)
@@ -84,7 +77,6 @@ export async function GET(request: NextRequest) {
       .filter((p) => p.totalStock > 0 && p.totalStock <= p.product.reorderLevel)
       .slice(0, 10)
 
-    // Out of stock products
     const outOfStockProducts = products
       .map((p) => {
         const totalStock = p.stockBalances.reduce((sum, b) => sum + b.quantity, 0)
@@ -93,7 +85,6 @@ export async function GET(request: NextRequest) {
       .filter((p) => p.totalStock === 0)
       .slice(0, 10)
 
-    // Recent activity (last 20 ledger entries)
     const recentActivity = await prisma.stockLedgerEntry.findMany({
       where: warehouseId ? { warehouseId } : {},
       include: {
@@ -106,7 +97,6 @@ export async function GET(request: NextRequest) {
       take: 20,
     })
 
-    // Stock by warehouse
     const warehouses = await prisma.warehouse.findMany({
       where: { isActive: true },
       include: {
@@ -124,11 +114,9 @@ export async function GET(request: NextRequest) {
       totalQuantity: w.stockBalances.reduce((sum, b) => sum + b.quantity, 0),
     }))
 
-    // Stock by location
     const locations = await prisma.location.findMany({
       where: { isActive: true, ...(warehouseId ? { warehouseId } : {}) },
       include: {
-        warehouse: true,
         stockBalances: {
           where: { quantity: { gt: 0 } },
           include: { product: true },
@@ -144,7 +132,6 @@ export async function GET(request: NextRequest) {
       totalQuantity: l.stockBalances.reduce((sum, b) => sum + b.quantity, 0),
     }))
 
-    // Pending operations
     const pendingOperations = [
       ...(await prisma.receipt.findMany({
         where: { status: { in: ['WAITING', 'READY'] }, ...(warehouseId ? { warehouseId } : {}) },
