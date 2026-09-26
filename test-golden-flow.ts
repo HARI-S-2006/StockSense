@@ -63,7 +63,7 @@ async function runGoldenTest() {
       status: 'READY',
       createdById: userId,
       items: {
-        create: [{ productId: product.id, quantity: 100 }]
+        create: [{ productId: product.id, quantity: 100, unit: 'kg' }]
       }
     }
   })
@@ -82,7 +82,7 @@ async function runGoldenTest() {
       status: 'READY',
       createdById: userId,
       items: {
-        create: [{ productId: product.id, quantity: 100 }]
+        create: [{ productId: product.id, quantity: 100, unit: 'kg' }]
       }
     }
   })
@@ -99,8 +99,9 @@ async function runGoldenTest() {
       locationId: prodRack.id,
       status: 'WAITING',
       createdById: userId,
+      customerName: 'Test Customer',
       items: {
-        create: [{ productId: product.id, quantity: 20 }]
+        create: [{ productId: product.id, quantity: 20, unit: 'kg' }]
       }
     }
   })
@@ -114,14 +115,14 @@ async function runGoldenTest() {
   const adjustment = await prisma.inventoryAdjustment.create({
     data: {
       adjustmentNumber: 'ADJ-' + Date.now(),
-      warehouseId: warehouse.id,
       locationId: prodRack.id,
       status: 'READY',
       createdById: userId,
-      reason: 'Damage',
-      items: {
-        create: [{ productId: product.id, recordedQty: 80, countedQty: 77, difference: -3 }]
-      }
+      notes: 'Damage',
+      productId: product.id,
+      recordedQty: 80,
+      countedQty: 77,
+      difference: -3
     }
   })
   await applyAdjustment(adjustment.id, userId)
