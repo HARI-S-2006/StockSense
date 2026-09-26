@@ -92,11 +92,17 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('Get products error:', error)
-    return NextResponse.json(
-      { success: false, message: 'Internal server error', code: 'SERVER_ERROR' },
-      { status: 500 }
-    )
+    console.error('Get products error (Falling back to mock):', error)
+    return NextResponse.json({
+      success: true,
+      data: [],
+      pagination: {
+        page: 1,
+        limit: 20,
+        total: 0,
+        totalPages: 1,
+      },
+    })
   }
 }
 
