@@ -572,8 +572,7 @@ export async function applyAdjustment(
   userId: string
 ): Promise<StockChangeResult> {
   const adjustment = await prisma.inventoryAdjustment.findUnique({
-    where: { id: adjustmentId },
-    include: { items: true },
+    where: { id: adjustmentId }
   })
 
   if (!adjustment) {
@@ -584,50 +583,48 @@ export async function applyAdjustment(
     return { success: false, message: `Cannot apply adjustment in ${adjustment.status} status`, code: 'INVALID_STATUS' }
   }
 
-  for (const item of adjustment.items) {
-    const balance = await getStockBalance(item.productId, adjustment.locationId)
-    const previousQuantity = balance?.quantity ?? 0
-    const newQuantity = previousQuantity + item.difference
+  const balance = await getStockBalance(adjustment.productId, adjustment.locationId)
+  const previousQuantity = balance?.quantity ?? 0
+  const newQuantity = previousQuantity + adjustment.difference
 
-    if (newQuantity < 0) {
-      return {
-        success: false,
-        message: `Adjustment would result in negative stock. Current: ${previousQuantity}, Change: ${item.difference}`,
-        code: 'NEGATIVE_STOCK',
-        details: { current: previousQuantity, change: item.difference },
-      }
+  if (newQuantity < 0) {
+    return {
+      success: false,
+      message: `Adjustment would result in negative stock. Current: ${previousQuantity}, Change: ${adjustment.difference}`,
+      code: 'NEGATIVE_STOCK',
+      details: { current: previousQuantity, change: adjustment.difference },
     }
-
-    const operationType = item.difference >= 0 ? 'ADJUSTMENT_IN' : 'ADJUSTMENT_OUT'
-
-    const stockResult = await updateStockWithLedger(
-      {
-        productId: item.productId,
-        warehouseId: balance?.warehouseId ?? '', // Will be filled from location
-        locationId: adjustment.locationId,
-        operationType,
-        documentType: 'ADJUSTMENT',
-        documentId: adjustment.id,
-        documentNumber: adjustment.adjustmentNumber,
-        previousQuantity,
-        quantityChange: item.difference,
-        newQuantity,
-        userId,
-        notes: `Adjustment: counted ${item.countedQty}, recorded ${item.recordedQty}`,
-      },
-      {
-        userId,
-        action: 'APPLY_ADJUSTMENT',
-        entity: 'InventoryAdjustment',
-        entityId: adjustment.id,
-        before: { status: adjustment.status, stock: previousQuantity },
-        after: { status: 'DONE', stock: newQuantity },
-        metadata: { itemId: item.id, productId: item.productId, recordedQty: item.recordedQty, countedQty: item.countedQty, difference: item.difference },
-      }
-    )
-
-    if (!stockResult.success) return stockResult
   }
+
+  const operationType = adjustment.difference >= 0 ? 'ADJUSTMENT_IN' : 'ADJUSTMENT_OUT'
+
+  const stockResult = await updateStockWithLedger(
+    {
+      productId: adjustment.productId,
+      warehouseId: balance?.warehouseId ?? '', // Will be filled from location
+      locationId: adjustment.locationId,
+      operationType,
+      documentType: 'ADJUSTMENT',
+      documentId: adjustment.id,
+      documentNumber: adjustment.adjustmentNumber,
+      previousQuantity,
+      quantityChange: adjustment.difference,
+      newQuantity,
+      userId,
+      notes: `Adjustment: counted ${adjustment.countedQty}, recorded ${adjustment.recordedQty}`,
+    },
+    {
+      userId,
+      action: 'APPLY_ADJUSTMENT',
+      entity: 'InventoryAdjustment',
+      entityId: adjustment.id,
+      before: { status: adjustment.status, stock: previousQuantity },
+      after: { status: 'DONE', stock: newQuantity },
+      metadata: { productId: adjustment.productId, recordedQty: adjustment.recordedQty, countedQty: adjustment.countedQty, difference: adjustment.difference },
+    }
+  )
+
+  if (!stockResult.success) return stockResult
 
   await prisma.inventoryAdjustment.update({
     where: { id: adjustmentId },
