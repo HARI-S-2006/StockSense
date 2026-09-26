@@ -33,7 +33,10 @@ export async function POST(
 
     const delivery = await prisma.deliveryOrder.findUnique({
       where: { id },
-      include: { items: { include: { product: true } } },
+      include: { 
+        items: { include: { product: true } },
+        location: { include: { warehouse: true } }
+      },
     })
 
     if (delivery) {
@@ -71,7 +74,7 @@ export async function POST(
               quantityChange: -item.quantity,
               newQuantity: balance.quantity,
               locationName: delivery.location.name,
-              warehouseName: delivery.warehouse.name,
+              warehouseName: delivery.location.warehouse.name,
               userName: auth.session!.name,
               createdAt: new Date().toISOString(),
             },

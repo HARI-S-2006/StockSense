@@ -39,9 +39,7 @@ export async function GET(request: NextRequest) {
     if (documentNumber) where.documentNumber = { contains: documentNumber, mode: 'insensitive' }
     if (userId) where.userId = userId
     if (dateFrom || dateTo) {
-      where.createdAt = {}
-      if (dateFrom) where.createdAt.gte = new Date(dateFrom)
-      if (dateTo) where.createdAt.lte = new Date(dateTo)
+      where.createdAt = { gte: dateFrom ? new Date(dateFrom) : undefined, lte: dateTo ? new Date(dateTo) : undefined }
     }
 
     const [entries, total] = await Promise.all([

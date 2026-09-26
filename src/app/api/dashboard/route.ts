@@ -128,6 +128,7 @@ export async function GET(request: NextRequest) {
     const locations = await prisma.location.findMany({
       where: { isActive: true, ...(warehouseId ? { warehouseId } : {}) },
       include: {
+        warehouse: true,
         stockBalances: {
           where: { quantity: { gt: 0 } },
           include: { product: true },

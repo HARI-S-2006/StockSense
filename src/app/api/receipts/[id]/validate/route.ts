@@ -35,7 +35,10 @@ export async function POST(
     // Get updated receipt for real-time events
     const receipt = await prisma.receipt.findUnique({
       where: { id },
-      include: { items: { include: { product: true } } },
+      include: { 
+        items: { include: { product: true } },
+        location: { include: { warehouse: true } }
+      },
     })
 
     // Emit real-time events
@@ -74,7 +77,7 @@ export async function POST(
               quantityChange: item.quantity,
               newQuantity: balance.quantity,
               locationName: receipt.location.name,
-              warehouseName: receipt.warehouse.name,
+              warehouseName: receipt.location.warehouse.name,
               userName: auth.session!.name,
               createdAt: new Date().toISOString(),
             },

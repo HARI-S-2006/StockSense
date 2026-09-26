@@ -30,22 +30,22 @@ export async function GET(
           include: { warehouse: true, location: true },
         },
         receiptItems: {
-          include: { receipt: true },
+          include: { receipt: { include: { location: true } } },
           orderBy: { createdAt: 'desc' },
           take: 10,
         },
         deliveryItems: {
-          include: { delivery: true },
+          include: { delivery: { include: { location: true } } },
           orderBy: { createdAt: 'desc' },
           take: 10,
         },
         transferItems: {
-          include: { transfer: true },
+          include: { transfer: { include: { fromLocation: true } } },
           orderBy: { createdAt: 'desc' },
           take: 10,
         },
         adjustmentItems: {
-          include: { adjustment: true },
+          include: { adjustment: { include: { location: true } } },
           orderBy: { createdAt: 'desc' },
           take: 10,
         },

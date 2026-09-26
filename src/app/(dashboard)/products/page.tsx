@@ -424,7 +424,7 @@ export default function ProductsPage() {
                 <FormField control={updateForm.control} name="isActive" render={({ field }) => (
                   <FormItem>
                     <div className="flex items-center space-x-2">
-                      <input type="checkbox" checked={field.value} onChange={(e) => field.onChange(e.target.checked)} className="h-4 w-4 rounded border-gray-300" />
+                      <input type="checkbox" checked={field.value as boolean} onChange={(e) => field.onChange(e.target.checked)} className="h-4 w-4 rounded border-gray-300" />
                       <FormLabel>Active</FormLabel>
                     </div>
                   </FormItem>

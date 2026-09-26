@@ -33,7 +33,10 @@ export async function POST(
 
     const adjustment = await prisma.inventoryAdjustment.findUnique({
       where: { id },
-      include: { items: { include: { product: true } } },
+      include: { 
+        items: { include: { product: true } },
+        location: { include: { warehouse: true } }
+      },
     })
 
     if (adjustment) {

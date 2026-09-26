@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
       const warehouse = await prisma.warehouse.findFirst({ where: { isActive: true } })
       const location = warehouse ? await prisma.location.findFirst({ where: { warehouseId: warehouse.id, isActive: true } }) : null
 
-      if (location) {
+      if (warehouse && location) {
         await prisma.stockBalance.create({
           data: {
             productId: product.id,

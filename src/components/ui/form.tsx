@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import * as Slot from '@radix-ui/react-slot'
-import { Controller, ControllerProps, FieldPath, FieldValues, FormProvider, useFormContext } from 'react-hook-form'
+import { Controller, ControllerProps, ControllerRenderProps, ControllerFieldState, UseFormStateReturn, FieldPath, FieldValues, FormProvider, useFormContext, Path } from 'react-hook-form'
 import { cn } from '@/lib/utils'
 import { Label } from '@/components/ui/label'
 
@@ -15,12 +15,12 @@ type FormFieldContextValue< TFieldValues extends FieldValues = FieldValues > = {
 const FormFieldContext = React.createContext<FormFieldContextValue>( {} as FormFieldContextValue )
 
 const FormField = < TFieldValues extends FieldValues = FieldValues >(
-  { ...props }: ControllerProps<TFieldValues>
+  { children, render, ...props }: ControllerProps<TFieldValues> & { children?: React.ReactNode; render?: (props: { field: ControllerRenderProps<TFieldValues, Path<TFieldValues>>; fieldState: ControllerFieldState; formState: UseFormStateReturn<TFieldValues> }) => React.ReactElement }
 ) => {
   return (
-    <Controller {...props} render={({ field }) => (
-      <FormFieldContext.Provider value={{ name: field.name }}>
-        {props.render ? props.render(field) : props.children}
+    <Controller {...props} render={(renderProps) => (
+      <FormFieldContext.Provider value={{ name: renderProps.field.name }}>
+        {render ? render(renderProps) : children}
       </FormFieldContext.Provider>
     )} />
   )

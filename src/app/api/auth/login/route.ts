@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Set cookie
-    setSessionCookie(token)
+    await setSessionCookie(token)
 
     // Audit log
     await prisma.auditLog.create({

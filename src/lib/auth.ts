@@ -85,8 +85,8 @@ export async function deleteAllUserSessions(userId: string): Promise<void> {
   await prisma.session.deleteMany({ where: { userId } })
 }
 
-export function setSessionCookie(token: string): void {
-  const cookieStore = cookies()
+export async function setSessionCookie(token: string): Promise<void> {
+  const cookieStore = await cookies()
   cookieStore.set(SESSION_COOKIE_NAME, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -96,8 +96,8 @@ export function setSessionCookie(token: string): void {
   })
 }
 
-export function clearSessionCookie(): void {
-  const cookieStore = cookies()
+export async function clearSessionCookie(): Promise<void> {
+  const cookieStore = await cookies()
   cookieStore.delete(SESSION_COOKIE_NAME)
 }
 

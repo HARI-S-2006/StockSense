@@ -99,10 +99,11 @@ export async function PUT(
       include: { items: { include: { product: true } } },
     })
 
+    // Audit log - using CREATE_RECEIPT as closest match
     await prisma.auditLog.create({
       data: {
         userId: auth.session!.userId,
-        action: 'UPDATE_RECEIPT', // Not in enum but will work
+        action: 'CREATE_RECEIPT',
         entity: 'Receipt',
         entityId: id,
         before: receipt,
@@ -161,7 +162,7 @@ export async function DELETE(
     await prisma.auditLog.create({
       data: {
         userId: auth.session!.userId,
-        action: 'DELETE_RECEIPT',
+        action: 'CANCEL_RECEIPT',
         entity: 'Receipt',
         entityId: id,
         before: receipt,

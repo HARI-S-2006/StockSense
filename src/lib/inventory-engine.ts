@@ -1,6 +1,9 @@
 import { prisma } from '@/lib/prisma'
-import { DocumentStatus, OperationType, AuditAction, Role, InputJsonValue } from '@prisma/client'
+import { DocumentStatus, OperationType, AuditAction, Role } from '@prisma/client'
 import { generateDocumentNumber } from '@/lib/utils'
+import { Prisma } from '@prisma/client'
+
+type InputJsonValue = Prisma.InputJsonValue
 
 // ============================================
 // CORE INVENTORY TRANSACTION ENGINE

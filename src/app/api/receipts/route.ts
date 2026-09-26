@@ -33,9 +33,7 @@ export async function GET(request: NextRequest) {
     if (warehouseId) where.warehouseId = warehouseId
     if (supplierId) where.supplierId = supplierId
     if (dateFrom || dateTo) {
-      where.date = {}
-      if (dateFrom) where.date.gte = new Date(dateFrom)
-      if (dateTo) where.date.lte = new Date(dateTo)
+      where.date = { gte: dateFrom ? new Date(dateFrom) : undefined, lte: dateTo ? new Date(dateTo) : undefined }
     }
 
     const [receipts, total] = await Promise.all([

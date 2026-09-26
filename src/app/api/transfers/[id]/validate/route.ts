@@ -33,7 +33,13 @@ export async function POST(
 
     const transfer = await prisma.internalTransfer.findUnique({
       where: { id },
-      include: { items: { include: { product: true } } },
+      include: { 
+        items: { include: { product: true } },
+        fromLocation: { include: { warehouse: true } },
+        fromWarehouse: true,
+        toLocation: { include: { warehouse: true } },
+        toWarehouse: true
+      },
     })
 
     if (transfer) {
