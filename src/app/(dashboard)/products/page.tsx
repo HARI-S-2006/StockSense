@@ -246,7 +246,7 @@ export default function ProductsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {productsResponse?.data.length === 0 ? (
+                    {(!productsResponse?.data || productsResponse.data.length === 0) ? (
                       <TableRow>
                         <TableCell colSpan={8} className="text-center py-8">
                           <Package className="mx-auto h-12 w-12 text-muted-foreground" />
@@ -254,7 +254,7 @@ export default function ProductsPage() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      productsResponse?.data.map((product) => (
+                      (productsResponse?.data || []).map((product: Product) => (
                         <TableRow key={product.id}>
                           <TableCell>
                             <div>
@@ -307,7 +307,7 @@ export default function ProductsPage() {
               </div>
 
               {/* Pagination */}
-              {productsResponse && productsResponse.pagination.totalPages > 1 && (
+              {productsResponse && productsResponse.pagination && productsResponse.pagination.totalPages > 1 && (
                 <div className="flex items-center justify-between border-t p-4">
                   <p className="text-sm text-muted-foreground">
                     Page {productsResponse.pagination.page} of {productsResponse.pagination.totalPages} • {productsResponse.pagination.total} total
