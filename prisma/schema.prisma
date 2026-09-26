@@ -91,6 +91,7 @@ model User {
   transfersValidated InternalTransfer[] @relation("TransferValidatedBy")
   adjustmentsCreated  InventoryAdjustment[] @relation("AdjustmentCreatedBy")
   adjustmentsApplied  InventoryAdjustment[] @relation("AdjustmentAppliedBy")
+  ledgerEntries     StockLedgerEntry[]
 
   @@index([email])
   @@index([role])
@@ -167,6 +168,11 @@ model Warehouse {
 
   locations Location[]
   stockBalances StockBalance[]
+  receipts Receipt[]
+  deliveries DeliveryOrder[]
+  transfersFrom InternalTransfer[] @relation("TransferFromWarehouse")
+  transfersTo InternalTransfer[] @relation("TransferToWarehouse")
+  ledgerEntries StockLedgerEntry[]
 
   @@index([code])
   @@index([name])
@@ -188,6 +194,7 @@ model Location {
   transfersFrom InternalTransfer[] @relation("TransferFromLocation")
   transfersTo   InternalTransfer[] @relation("TransferToLocation")
   adjustments   InventoryAdjustment[]
+  ledgerEntries StockLedgerEntry[]
 
   @@unique([warehouseId, code])
   @@index([warehouseId])
@@ -214,6 +221,7 @@ model Product {
   transferItems   InternalTransferItem[]
   adjustmentItems InventoryAdjustmentItem[]
   ledgerEntries   StockLedgerEntry[]
+  adjustments     InventoryAdjustment[]
 
   @@index([sku])
   @@index([name])
@@ -376,9 +384,9 @@ model InternalTransfer {
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 
-  fromWarehouse Warehouse         @relation(fields: [fromWarehouseId], references: [id], onDelete: Restrict)
+  fromWarehouse Warehouse         @relation("TransferFromWarehouse", fields: [fromWarehouseId], references: [id], onDelete: Restrict)
   fromLocation  Location          @relation("TransferFromLocation", fields: [fromLocationId], references: [id], onDelete: Restrict)
-  toWarehouse   Warehouse         @relation(fields: [toWarehouseId], references: [id], onDelete: Restrict)
+  toWarehouse   Warehouse         @relation("TransferToWarehouse", fields: [toWarehouseId], references: [id], onDelete: Restrict)
   toLocation    Location          @relation("TransferToLocation", fields: [toLocationId], references: [id], onDelete: Restrict)
   createdBy     User              @relation("TransferCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   validatedBy   User?             @relation("TransferValidatedBy", fields: [validatedById], references: [id], onDelete: SetNull)
