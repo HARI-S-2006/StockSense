@@ -230,8 +230,8 @@ export default function DashboardPage() {
               <AlertTriangle className="h-5 w-5 text-yellow-500" />
               Low Stock Alerts
             </CardTitle>
-            <Badge variant={data?.lowStockAlerts.length > 0 ? 'warning' : 'secondary'}>
-              {data?.lowStockAlerts.length ?? 0}
+            <Badge variant={(data?.lowStockAlerts?.length ?? 0) > 0 ? 'warning' : 'secondary'}>
+              {data?.lowStockAlerts?.length ?? 0}
             </Badge>
           </CardHeader>
           <CardContent>
@@ -239,7 +239,7 @@ export default function DashboardPage() {
               <p className="text-sm text-muted-foreground text-center py-4">No low stock items</p>
             ) : (
               <div className="space-y-3 max-h-64 overflow-y-auto">
-                {data.lowStockAlerts.map((alert) => (
+                {data?.lowStockAlerts.map((alert) => (
                   <div key={alert.productId} className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-100">
                     <div>
                       <p className="font-medium">{alert.productName}</p>
@@ -260,8 +260,8 @@ export default function DashboardPage() {
               <AlertTriangle className="h-5 w-5 text-red-500" />
               Out of Stock
             </CardTitle>
-            <Badge variant={data?.outOfStockAlerts.length > 0 ? 'destructive' : 'secondary'}>
-              {data?.outOfStockAlerts.length ?? 0}
+            <Badge variant={(data?.outOfStockAlerts?.length ?? 0) > 0 ? 'destructive' : 'secondary'}>
+              {data?.outOfStockAlerts?.length ?? 0}
             </Badge>
           </CardHeader>
           <CardContent>
@@ -269,7 +269,7 @@ export default function DashboardPage() {
               <p className="text-sm text-muted-foreground text-center py-4">No out of stock items</p>
             ) : (
               <div className="space-y-3 max-h-64 overflow-y-auto">
-                {data.outOfStockAlerts.map((alert) => (
+                {data?.outOfStockAlerts.map((alert) => (
                   <div key={alert.productId} className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-100">
                     <div>
                       <p className="font-medium">{alert.productName}</p>
@@ -296,7 +296,7 @@ export default function DashboardPage() {
               <p className="text-sm text-muted-foreground text-center py-4">No recent activity</p>
             ) : (
               <div className="space-y-3">
-                {data.recentActivity.slice(0, 10).map((activity) => (
+                {data?.recentActivity.slice(0, 10).map((activity) => (
                   <div key={activity.id} className="flex items-center justify-between py-2 border-b last:border-0">
                     <div className="flex items-center gap-3">
                       <div className={cn(
@@ -346,7 +346,7 @@ export default function DashboardPage() {
               <p className="text-sm text-muted-foreground text-center py-4">No pending operations</p>
             ) : (
               <div className="space-y-3">
-                {data.pendingOperations.slice(0, 10).map((op) => (
+                {data?.pendingOperations.slice(0, 10).map((op) => (
                   <div key={op.id} className="flex items-center justify-between py-2 border-b last:border-0">
                     <div className="flex items-center gap-3">
                       <Badge variant={

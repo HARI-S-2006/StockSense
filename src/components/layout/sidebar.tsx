@@ -60,7 +60,7 @@ export function Sidebar() {
     })
   }
 
-  const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
+  const isActive = (href?: string) => href ? (pathname === href || pathname.startsWith(href + '/')) : false
 
   const handleLogout = () => {
     clearSession()
@@ -175,8 +175,8 @@ export function Sidebar() {
           {!collapsed && session && (
             <div className="flex items-center gap-3 px-2">
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{session.name}</p>
-                <p className="text-xs text-muted-foreground capitalize">{session.role.toLowerCase().replace('_', ' ')}</p>
+                <p className="text-sm font-medium truncate">{session?.name}</p>
+                <p className="text-xs text-muted-foreground capitalize">{session?.role?.toLowerCase().replace('_', ' ')}</p>
               </div>
             </div>
           )}

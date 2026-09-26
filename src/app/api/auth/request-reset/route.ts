@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { forgotPasswordSchema } from '@/lib/validations'
-import { generateOTP, hashPassword } from '@/lib/utils'
+import { generateOTP } from '@/lib/utils'
+import { hashPassword } from '@/lib/auth'
 import { emailService } from '@/lib/email'
 import { AuditAction } from '@prisma/client'
 

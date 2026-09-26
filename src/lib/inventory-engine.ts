@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import { DocumentStatus, OperationType, AuditAction, Role } from '@prisma/client'
+import { DocumentStatus, OperationType, AuditAction, Role, InputJsonValue } from '@prisma/client'
 import { generateDocumentNumber } from '@/lib/utils'
 
 // ============================================
@@ -10,7 +10,7 @@ export interface StockChangeResult {
   success: boolean
   message: string
   code?: string
-  details?: Record<string, unknown>
+  details?: InputJsonValue
   previousQuantity?: number
   newQuantity?: number
 }
@@ -35,9 +35,9 @@ export interface AuditLogData {
   action: AuditAction
   entity: string
   entityId: string
-  before?: Record<string, unknown>
-  after?: Record<string, unknown>
-  metadata?: Record<string, unknown>
+  before?: InputJsonValue
+  after?: InputJsonValue
+  metadata?: InputJsonValue
   ipAddress?: string
   userAgent?: string
 }
@@ -49,7 +49,7 @@ export interface AuditLogData {
 export async function getStockBalance(
   productId: string,
   locationId: string
-): Promise<{ quantity: number; balanceId: string } | null> {
+): Promise<{ quantity: number; balanceId: string; warehouseId: string } | null> {
   const balance = await prisma.stockBalance.findUnique({
     where: {
       productId_locationId: { productId, locationId },
@@ -58,7 +58,7 @@ export async function getStockBalance(
 
   if (!balance) return null
 
-  return { quantity: balance.quantity, balanceId: balance.id }
+  return { quantity: balance.quantity, balanceId: balance.id, warehouseId: balance.warehouseId }
 }
 
 export async function getStockBalancesByProduct(productId: string) {

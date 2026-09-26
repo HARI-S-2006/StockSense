@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma'
 import { Role } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 
+export { Role } from '@prisma/client'
+
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production-min-32-chars'
 )

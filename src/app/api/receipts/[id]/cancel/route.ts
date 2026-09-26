@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/auth'
 import { cancelReceipt } from '@/lib/inventory-engine'
-import { emitReceiptUpdated } from '@/lib/realtime-server'
+import { emitReceiptUpdated } from '@/lib/socket-server'
 
 async function requireAuth() {
   const session = await getSession()

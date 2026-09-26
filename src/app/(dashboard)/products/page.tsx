@@ -279,7 +279,19 @@ export default function ProductsPage() {
                               <Button variant="ghost" size="icon" asChild>
                                 <Link href={`/products/${product.id}`}><Eye className="h-4 w-4" /></Link>
                               </Button>
-                              <Button variant="ghost" size="icon" onClick={() => { updateForm.reset(product); setEditingProduct(product); }}>
+                              <Button variant="ghost" size="icon" onClick={() => { 
+                updateForm.reset({
+                  name: product.name,
+                  sku: product.sku,
+                  categoryId: product.categoryId,
+                  unitOfMeasure: product.unitOfMeasure,
+                  reorderLevel: product.reorderLevel,
+                  initialStock: product.initialStock,
+                  description: product.description || '',
+                  isActive: product.isActive,
+                }); 
+                setEditingProduct(product); 
+              }}>
                                 <Edit className="h-4 w-4" />
                               </Button>
                               <Button variant="ghost" size="icon" onClick={() => { if (confirm('Delete this product?')) deleteMutation.mutate(product.id) }}>
@@ -328,7 +340,7 @@ export default function ProductsPage() {
               )} />
               <div className="grid gap-4 sm:grid-cols-2">
                 <FormField control={createForm.control} name="categoryId" render={({ field }) => (
-                  <FormItem><FormLabel>Category</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormItem><FormLabel>Category</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value as string}>
                     <FormControl><SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger></FormControl>
                     <SelectContent>
                       {categoriesResponse?.data?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
@@ -336,7 +348,7 @@ export default function ProductsPage() {
                   </Select><FormMessage /></FormItem>
                 )} />
                 <FormField control={createForm.control} name="unitOfMeasure" render={({ field }) => (
-                  <FormItem><FormLabel>Unit of Measure</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormItem><FormLabel>Unit of Measure</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value as string}>
                     <FormControl><SelectTrigger><SelectValue placeholder="pcs" /></SelectTrigger></FormControl>
                     <SelectContent>
                       {['pcs', 'kg', 'liters', 'boxes', 'units', 'meters'].map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
@@ -382,7 +394,7 @@ export default function ProductsPage() {
                 )} />
                 <div className="grid gap-4 sm:grid-cols-2">
                   <FormField control={updateForm.control} name="categoryId" render={({ field }) => (
-                    <FormItem><FormLabel>Category</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormItem><FormLabel>Category</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value as string}>
                       <FormControl><SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger></FormControl>
                       <SelectContent>
                         {categoriesResponse?.data?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
@@ -390,7 +402,7 @@ export default function ProductsPage() {
                     </Select><FormMessage /></FormItem>
                   )} />
                   <FormField control={updateForm.control} name="unitOfMeasure" render={({ field }) => (
-                    <FormItem><FormLabel>Unit of Measure</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormItem><FormLabel>Unit of Measure</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value as string}>
                       <FormControl><SelectTrigger><SelectValue placeholder="pcs" /></SelectTrigger></FormControl>
                       <SelectContent>
                         {['pcs', 'kg', 'liters', 'boxes', 'units', 'meters'].map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}

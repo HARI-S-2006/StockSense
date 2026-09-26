@@ -15,12 +15,12 @@ type FormFieldContextValue< TFieldValues extends FieldValues = FieldValues > = {
 const FormFieldContext = React.createContext<FormFieldContextValue>( {} as FormFieldContextValue )
 
 const FormField = < TFieldValues extends FieldValues = FieldValues >(
-  { ...props }: ControllerProps< TFieldValues >
+  { ...props }: ControllerProps<TFieldValues>
 ) => {
   return (
     <Controller {...props} render={({ field }) => (
       <FormFieldContext.Provider value={{ name: field.name }}>
-        {props.children(field)}
+        {props.render ? props.render(field) : props.children}
       </FormFieldContext.Provider>
     )} />
   )

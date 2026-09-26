@@ -81,7 +81,7 @@ interface UseRealtimeOptions {
 
 export function useRealtime(options: UseRealtimeOptions = {}) {
   const { autoConnect = true, onConnect, onDisconnect, onError } = options
-  const { session } = useSession()
+  const { session, token } = useSession()
   const socketRef = useRef<Socket | null>(null)
   const [isConnected, setIsConnected] = useState(false)
   const [connectionError, setConnectionError] = useState<Error | null>(null)
@@ -89,14 +89,14 @@ export function useRealtime(options: UseRealtimeOptions = {}) {
 
   // Initialize socket connection
   useEffect(() => {
-    if (!autoConnect || !session) return
+    if (!autoConnect || !session || !token) return
 
     const socketUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
     
     socketRef.current = io(socketUrl, {
       path: '/api/socket',
       auth: {
-        token: session.token, // We'll need to store token in session
+        token,
       },
       transports: ['websocket', 'polling'],
       reconnection: true,

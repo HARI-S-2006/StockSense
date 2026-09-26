@@ -4,7 +4,6 @@ import { MainLayout } from '@/components/layout/main-layout'
 import { useSession } from '@/hooks/use-session'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
-import { Redirect } from 'next/navigation'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { session, isLoading } = useSession()
@@ -25,7 +24,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   if (!session) {
-    return <Redirect href="/login" />
+    return null
   }
 
   return <MainLayout>{children}</MainLayout>

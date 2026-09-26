@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/auth'
 import { validateReceipt } from '@/lib/inventory-engine'
-import { emitReceiptUpdated, emitLedgerCreated, emitStockUpdated, emitAlertUpdated } from '@/lib/realtime-server'
+import { emitReceiptUpdated, emitLedgerCreated, emitStockUpdated, emitAlertUpdated } from '@/lib/socket-server'
 import { AuditAction } from '@prisma/client'
 
 async function requireAuth() {
