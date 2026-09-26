@@ -94,28 +94,37 @@ export async function updateStockWithLedger(
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      // Lock the stock balance row for update
-      const balance = await tx.stockBalance.findUnique({
+      // Find or create the stock balance
+      let balance = await tx.stockBalance.findUnique({
         where: { productId_locationId: { productId, locationId } },
-        // Use FOR UPDATE equivalent in Prisma
       })
 
       if (!balance) {
-        throw new Error(`Stock balance not found for product ${productId} at location ${locationId}`)
-      }
+        if (previousQuantity !== 0) {
+          throw new Error(`Concurrency conflict: expected quantity ${previousQuantity}, found 0.`)
+        }
+        balance = await tx.stockBalance.create({
+          data: {
+            productId,
+            warehouseId,
+            locationId,
+            quantity: newQuantity
+          }
+        })
+      } else {
+        // Verify the previous quantity matches (concurrency protection)
+        if (balance.quantity !== previousQuantity) {
+          throw new Error(
+            `Concurrency conflict: expected quantity ${previousQuantity}, found ${balance.quantity}. Please refresh and try again.`
+          )
+        }
 
-      // Verify the previous quantity matches (concurrency protection)
-      if (balance.quantity !== previousQuantity) {
-        throw new Error(
-          `Concurrency conflict: expected quantity ${previousQuantity}, found ${balance.quantity}. Please refresh and try again.`
-        )
+        // Update stock balance
+        balance = await tx.stockBalance.update({
+          where: { id: balance.id },
+          data: { quantity: newQuantity },
+        })
       }
-
-      // Update stock balance
-      await tx.stockBalance.update({
-        where: { id: balance.id },
-        data: { quantity: newQuantity },
-      })
 
       // Create ledger entry
       await tx.stockLedgerEntry.create({
