@@ -72,7 +72,7 @@ export default function ProductsPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
 
-  const { data: productsResponse, isLoading } = useQuery<ProductsResponse>({
+  const { data: productsResponse, isLoading } = useQuery({
     queryKey: ['products', { search, categoryFilter, statusFilter, page }],
     queryFn: async () => {
       const params = new URLSearchParams()
@@ -81,15 +81,16 @@ export default function ProductsPage() {
       if (statusFilter) params.set('stockStatus', statusFilter)
       params.set('page', page.toString())
       params.set('limit', '20')
-      const res = await fetch(`/api/products?${params}`)
+      const url = "/api/products?" + params.toString()
+const res = await fetch(url)
       return res.json()
     },
   })
 
-  const { data: categoriesResponse } = useQuery<{ success: boolean; data: Category[] }>({
+  const { data: categoriesResponse } = useQuery({
     queryKey: ['categories'],
     queryFn: async () => {
-      const res = await fetch('/api/categories')
+      const res = await fetch("/api/categories")
       return res.json()
     },
   })
@@ -201,7 +202,7 @@ export default function ProductsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="">All Categories</SelectItem>
-                {categoriesResponse?.data?.map((c) => (
+                {categoriesResponse?.data?.map((c: { id: string; name: string }) => (
                   <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                 ))}
               </SelectContent>
@@ -246,7 +247,7 @@ export default function ProductsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {(!productsResponse?.data || productsResponse.data.length === 0) ? (
+                    {productsResponse?.data.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={8} className="text-center py-8">
                           <Package className="mx-auto h-12 w-12 text-muted-foreground" />
@@ -254,7 +255,7 @@ export default function ProductsPage() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      (productsResponse?.data || []).map((product: Product) => (
+                      productsResponse?.data?.map((product: { id: string; name: string; sku: string; categoryId: string; category?: { name: string }; unitOfMeasure: string; reorderLevel: number; totalStock: number; stockStatus: string; initialStock: number; isActive: boolean; description?: string }) => (
                         <TableRow key={product.id}>
                           <TableCell>
                             <div>
@@ -279,19 +280,7 @@ export default function ProductsPage() {
                               <Button variant="ghost" size="icon" asChild>
                                 <Link href={`/products/${product.id}`}><Eye className="h-4 w-4" /></Link>
                               </Button>
-                              <Button variant="ghost" size="icon" onClick={() => { 
-                updateForm.reset({
-                  name: product.name,
-                  sku: product.sku,
-                  categoryId: product.categoryId,
-                  unitOfMeasure: product.unitOfMeasure,
-                  reorderLevel: product.reorderLevel,
-                  initialStock: product.initialStock,
-                  description: product.description || '',
-                  isActive: product.isActive,
-                }); 
-                setEditingProduct(product); 
-              }}>
+                              <Button variant="ghost" size="icon" onClick={() => { updateForm.reset({ name: product.name, sku: product.sku, categoryId: product.categoryId, unitOfMeasure: product.unitOfMeasure, reorderLevel: product.reorderLevel, initialStock: product.initialStock, description: product.description, isActive: product.isActive }); setEditingProduct(product as Product); }}>
                                 <Edit className="h-4 w-4" />
                               </Button>
                               <Button variant="ghost" size="icon" onClick={() => { if (confirm('Delete this product?')) deleteMutation.mutate(product.id) }}>
@@ -307,7 +296,7 @@ export default function ProductsPage() {
               </div>
 
               {/* Pagination */}
-              {productsResponse && productsResponse.pagination && productsResponse.pagination.totalPages > 1 && (
+              {productsResponse && productsResponse.pagination.totalPages > 1 && (
                 <div className="flex items-center justify-between border-t p-4">
                   <p className="text-sm text-muted-foreground">
                     Page {productsResponse.pagination.page} of {productsResponse.pagination.totalPages} • {productsResponse.pagination.total} total
@@ -333,22 +322,22 @@ export default function ProductsPage() {
           <Form {...createForm}>
             <form onSubmit={handleCreateSubmit} className="space-y-4 py-4">
               <FormField control={createForm.control} name="name" render={({ field }) => (
-                <FormItem><FormLabel>Product Name</FormLabel><FormControl><Input placeholder="Steel Rods" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Product Name</FormLabel><FormControl><Input placeholder="Steel Rods" {...field} value={field.value as string | undefined} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField control={createForm.control} name="sku" render={({ field }) => (
-                <FormItem><FormLabel>SKU / Code</FormLabel><FormControl><Input placeholder="STL-001" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>SKU / Code</FormLabel><FormControl><Input placeholder="STL-001" {...field} value={field.value as string | undefined} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>
               )} />
               <div className="grid gap-4 sm:grid-cols-2">
                 <FormField control={createForm.control} name="categoryId" render={({ field }) => (
-                  <FormItem><FormLabel>Category</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value as string}>
+                  <FormItem><FormLabel>Category</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value as string | undefined}>
                     <FormControl><SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger></FormControl>
                     <SelectContent>
-                      {categoriesResponse?.data?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                      {categoriesResponse?.data?.map((c: { id: string; name: string }) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                     </SelectContent>
                   </Select><FormMessage /></FormItem>
                 )} />
                 <FormField control={createForm.control} name="unitOfMeasure" render={({ field }) => (
-                  <FormItem><FormLabel>Unit of Measure</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value as string}>
+                  <FormItem><FormLabel>Unit of Measure</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value as string | undefined}>
                     <FormControl><SelectTrigger><SelectValue placeholder="pcs" /></SelectTrigger></FormControl>
                     <SelectContent>
                       {['pcs', 'kg', 'liters', 'boxes', 'units', 'meters'].map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
@@ -357,15 +346,23 @@ export default function ProductsPage() {
                 )} />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <FormField control={createForm.control} name="reorderLevel" render={({ field }) => (
-                  <FormItem><FormLabel>Reorder Level</FormLabel><FormControl><Input type="number" min="0" {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={createForm.control} name="initialStock" render={({ field }) => (
-                  <FormItem><FormLabel>Initial Stock</FormLabel><FormControl><Input type="number" min="0" {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
+<FormField control={createForm.control} name="reorderLevel" render={({ field }) => (
+                <FormItem><FormLabel>Reorder Level</FormLabel><FormControl><Input type="number" min="0" {...field} value={field.value as number | string | undefined} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>
+              )} />
+              <FormField control={createForm.control} name="initialStock" render={({ field }) => (
+                <FormItem><FormLabel>Initial Stock</FormLabel><FormControl><Input type="number" min="0" {...field} value={field.value as number | string | undefined} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>
+              )} />
               </div>
               <FormField control={createForm.control} name="description" render={({ field }) => (
-                <FormItem><FormLabel>Description</FormLabel><FormControl><Input placeholder="Optional description" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Description</FormLabel><FormControl><Input placeholder="Optional description" {...field} value={field.value as string | undefined} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>
+              )} />
+              <FormField control={createForm.control} name="isActive" render={({ field }) => (
+                <FormItem>
+                  <div className="flex items-center space-x-2">
+                    <input type="checkbox" checked={Boolean(field.value)} onChange={(e) => field.onChange(e.target.checked)} className="h-4 w-4 rounded border-gray-300" />
+                    <FormLabel>Active</FormLabel>
+                  </div>
+                </FormItem>
               )} />
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Cancel</Button>
@@ -387,22 +384,22 @@ export default function ProductsPage() {
             <Form {...updateForm}>
               <form onSubmit={handleUpdateSubmit} className="space-y-4 py-4">
                 <FormField control={updateForm.control} name="name" render={({ field }) => (
-                  <FormItem><FormLabel>Product Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormLabel>Product Name</FormLabel><FormControl><Input {...field} value={field.value as string | undefined} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={updateForm.control} name="sku" render={({ field }) => (
-                  <FormItem><FormLabel>SKU / Code</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormLabel>SKU / Code</FormLabel><FormControl><Input {...field} value={field.value as string | undefined} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <div className="grid gap-4 sm:grid-cols-2">
                   <FormField control={updateForm.control} name="categoryId" render={({ field }) => (
-                    <FormItem><FormLabel>Category</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value as string}>
+                    <FormItem><FormLabel>Category</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value as string | undefined}>
                       <FormControl><SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger></FormControl>
                       <SelectContent>
-                        {categoriesResponse?.data?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+{categoriesResponse?.data?.map((c: { id: string; name: string }) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                       </SelectContent>
                     </Select><FormMessage /></FormItem>
                   )} />
                   <FormField control={updateForm.control} name="unitOfMeasure" render={({ field }) => (
-                    <FormItem><FormLabel>Unit of Measure</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value as string}>
+                    <FormItem><FormLabel>Unit of Measure</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value as string | undefined}>
                       <FormControl><SelectTrigger><SelectValue placeholder="pcs" /></SelectTrigger></FormControl>
                       <SelectContent>
                         {['pcs', 'kg', 'liters', 'boxes', 'units', 'meters'].map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
@@ -412,19 +409,19 @@ export default function ProductsPage() {
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <FormField control={updateForm.control} name="reorderLevel" render={({ field }) => (
-                    <FormItem><FormLabel>Reorder Level</FormLabel><FormControl><Input type="number" min="0" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Reorder Level</FormLabel><FormControl><Input type="number" min="0" {...field} value={field.value as number | string | undefined} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>
                   )} />
                   <FormField control={updateForm.control} name="initialStock" render={({ field }) => (
-                    <FormItem><FormLabel>Initial Stock</FormLabel><FormControl><Input type="number" min="0" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Initial Stock</FormLabel><FormControl><Input type="number" min="0" {...field} value={field.value as number | string | undefined} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>
                   )} />
                 </div>
                 <FormField control={updateForm.control} name="description" render={({ field }) => (
-                  <FormItem><FormLabel>Description</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormLabel>Description</FormLabel><FormControl><Input {...field} value={field.value as string | undefined} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={updateForm.control} name="isActive" render={({ field }) => (
                   <FormItem>
                     <div className="flex items-center space-x-2">
-                      <input type="checkbox" checked={field.value as boolean} onChange={(e) => field.onChange(e.target.checked)} className="h-4 w-4 rounded border-gray-300" />
+<input type="checkbox" checked={Boolean(field.value)} onChange={(e) => field.onChange(e.target.checked)} className="h-4 w-4 rounded border-gray-300" />
                       <FormLabel>Active</FormLabel>
                     </div>
                   </FormItem>

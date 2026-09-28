@@ -1,18 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { verifyAuthToken } from '@/lib/auth-middleware'
+import { getSession } from '@/lib/auth'
 import { ledgerFiltersSchema } from '@/lib/validations'
 
-async function requireAuth(request: NextRequest) {
-  const auth = await verifyAuthToken(request)
-  if (!auth) {
-    return { error: NextResponse.json({ success: false, message: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 }), auth: null as any }
+async function requireAuth() {
+  const session = await getSession()
+  if (!session) {
+    return { error: NextResponse.json({ success: false, message: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 }), session: null }
   }
-  return { error: null, auth }
+  return { error: null, session }
 }
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAuth(request)
+  const auth = await requireAuth()
   if (auth.error) return auth.error
 
   try {
@@ -39,9 +39,7 @@ export async function GET(request: NextRequest) {
     if (documentNumber) where.documentNumber = { contains: documentNumber, mode: 'insensitive' }
     if (userId) where.userId = userId
     if (dateFrom || dateTo) {
-      where.createdAt = {}
-      if (dateFrom) where.createdAt.gte = new Date(dateFrom)
-      if (dateTo) where.createdAt.lte = new Date(dateTo)
+      where.createdAt = { gte: dateFrom ? new Date(dateFrom) : undefined, lte: dateTo ? new Date(dateTo) : undefined }
     }
 
     const [entries, total] = await Promise.all([

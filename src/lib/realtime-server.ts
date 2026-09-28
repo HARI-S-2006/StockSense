@@ -126,7 +126,7 @@ class RealtimeServer {
 
   getTotalConnections(): number {
     let count = 0
-    for (const sockets of this.userSockets.values()) {
+    for (const sockets of Array.from(this.userSockets.values())) {
       count += sockets.size
     }
     return count

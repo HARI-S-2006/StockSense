@@ -1,24 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { verifyAuthToken } from '@/lib/auth-middleware'
+import { getSession } from '@/lib/auth'
 import { hashPassword } from '@/lib/auth'
 import { AuditAction } from '@prisma/client'
 
-async function requireAuth(request: NextRequest) {
-  const auth = await verifyAuthToken(request)
-  if (!auth) {
-    return { error: NextResponse.json({ success: false, message: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 }), auth: null as any }
+async function requireAuth() {
+  const session = await getSession()
+  if (!session) {
+    return { error: NextResponse.json({ success: false, message: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 }), session: null }
   }
-  return { error: null, auth }
+  return { error: null, session }
 }
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAuth(request)
+  const auth = await requireAuth()
   if (auth.error) return auth.error
 
   try {
     const user = await prisma.user.findUnique({
-      where: { id: auth.auth!.userId },
+      where: { id: auth.session!.userId },
       select: {
         id: true,
         name: true,
@@ -48,14 +48,14 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
-  const auth = await requireAuth(request)
+  const auth = await requireAuth()
   if (auth.error) return auth.error
 
   try {
     const body = await request.json()
     const { name, currentPassword, newPassword } = body
 
-    const user = await prisma.user.findUnique({ where: { id: auth.auth!.userId } })
+    const user = await prisma.user.findUnique({ where: { id: auth.session!.userId } })
     if (!user) {
       return NextResponse.json(
         { success: false, message: 'User not found', code: 'NOT_FOUND' },
@@ -97,17 +97,17 @@ export async function PUT(request: NextRequest) {
     }
 
     const updatedUser = await prisma.user.update({
-      where: { id: auth.auth!.userId },
+      where: { id: auth.session!.userId },
       data: updateData,
       select: { id: true, name: true, email: true, role: true },
     })
 
     await prisma.auditLog.create({
       data: {
-        userId: auth.auth!.userId,
-        action: 'UPDATE_PRODUCT',
+        userId: auth.session!.userId,
+        action: 'UPDATE_PRODUCT', // Reuse action type
         entity: 'User',
-        entityId: auth.auth!.userId,
+        entityId: auth.session!.userId,
         before: { name: user.name },
         after: { name: updatedUser.name },
       },

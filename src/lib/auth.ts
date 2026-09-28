@@ -1,10 +1,13 @@
 import { SignJWT, jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
-// import removed
-export enum Role { INVENTORY_MANAGER = "INVENTORY_MANAGER", WAREHOUSE_STAFF = "WAREHOUSE_STAFF" }
 import bcrypt from 'bcryptjs'
 
-
+export enum Role {
+  ADMIN = 'ADMIN',
+  INVENTORY_MANAGER = 'INVENTORY_MANAGER',
+  WAREHOUSE_STAFF = 'WAREHOUSE_STAFF',
+  USER = 'USER',
+}
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production-min-32-chars'
@@ -15,25 +18,23 @@ const SESSION_COOKIE_NAME = process.env.SESSION_COOKIE_NAME || 'stocksense_sessi
 export interface SessionPayload {
   userId: string
   email: string
-  name: string
   role: Role
 }
 
-export async function createSession(payload: SessionPayload): Promise<string> {
+export async function signToken(payload: SessionPayload): Promise<string> {
   const token = await new SignJWT({ ...payload })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime(JWT_EXPIRY)
     .sign(JWT_SECRET)
-
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
-
-  null
-
   return token
 }
 
-export async function verifySession(token: string): Promise<SessionPayload | null> {
+export async function createSession(payload: SessionPayload): Promise<string> {
+  return signToken(payload)
+}
+
+export async function verifyToken(token: string): Promise<SessionPayload | null> {
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET)
     return payload as unknown as SessionPayload
@@ -42,38 +43,24 @@ export async function verifySession(token: string): Promise<SessionPayload | nul
   }
 }
 
+export async function verifySession(token: string): Promise<SessionPayload | null> {
+  return verifyToken(token)
+}
+
 export async function getSession(): Promise<SessionPayload | null> {
   const cookieStore = await cookies()
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value
 
   if (!token) return null
-
-  const payload = await verifySession(token)
-  if (!payload) return null
-
-  const session = null
-
-  if (!session || session.expiresAt < new Date()) {
-    null
-    return null
-  }
-
-  if (!session.user.isActive) return null
-
-  return {
-    userId: session.user.id,
-    email: session.user.email,
-    name: session.user.name,
-    role: session.user.role,
-  }
+  return verifyToken(token)
 }
 
 export async function deleteSession(token: string): Promise<void> {
-  null
+  // No-op for JWT-based auth
 }
 
 export async function deleteAllUserSessions(userId: string): Promise<void> {
-  null
+  // No-op for JWT-based auth
 }
 
 export async function setSessionCookie(token: string): Promise<void> {
@@ -82,7 +69,7 @@ export async function setSessionCookie(token: string): Promise<void> {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 7, // 7 days
+    maxAge: 60 * 60 * 24 * 7,
     path: '/',
   })
 }
@@ -98,10 +85,4 @@ export async function hashPassword(password: string): Promise<string> {
 
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
   return bcrypt.compare(password, hash)
-}
-
-export function requireAuth(allowedRoles?: Role[]): SessionPayload {
-  // This will be used in server actions/API routes
-  // The actual session check happens in the calling function
-  throw new Error('requireAuth must be used with getSession()')
 }

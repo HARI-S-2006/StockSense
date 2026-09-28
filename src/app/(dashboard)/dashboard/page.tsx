@@ -1,171 +1,440 @@
-// import removed
+'use client'
+
+import * as React from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Separator } from '@/components/ui/separator'
 import {
   Package,
   AlertTriangle,
-  ArrowDownToLine,
   Truck,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Loader2,
+  TrendingUp,
+  TrendingDown,
+  Minus,
 } from 'lucide-react'
+import { formatNumber, getStockStatusColor, getDocumentStatusColor, formatRelativeTime } from '@/lib/utils'
+import { useRealtime, useDashboardUpdates, useAlertUpdates } from '@/hooks/use-realtime'
+import { cn } from '@/lib/utils'
 
-// Fetch dashboard KPIs
-async function getDashboardStats() {
-  try {
-    const [
-      totalProducts,
-      lowStockItems,
-      pendingReceipts,
-      pendingDeliveries,
-      pendingTransfers
-    ] = await Promise.all([
-      ({} as any).product.count({ where: { isActive: true } }),
-      ({} as any).product.count({ where: { reorderLevel: { gt: 0 } } }),
-      ({} as any).receipt.count({ where: { status: { in: ['DRAFT', 'READY'] } } }),
-      ({} as any).deliveryOrder.count({ where: { status: { in: ['DRAFT', 'WAITING', 'READY'] } } }),
-      ({} as any).internalTransfer.count({ where: { status: { in: ['DRAFT', 'READY'] } } }),
-    ])
+interface KPIData {
+  totalProductsInStock: number
+  lowStockItems: number
+  outOfStockItems: number
+  pendingReceipts: number
+  pendingDeliveries: number
+  pendingTransfers: number
+  lowStockAlerts: Array<{
+    productId: string
+    productName: string
+    sku: string
+    currentStock: number
+    reorderLevel: number
+    unit: string
+  }>
+  outOfStockAlerts: Array<{
+    productId: string
+    productName: string
+    sku: string
+    unit: string
+  }>
+  recentActivity: Array<{
+    id: string
+    productName: string
+    sku: string
+    operationType: string
+    documentNumber: string
+    quantityChange: number
+    newQuantity: number
+    warehouse: string
+    location: string
+    user: string
+    date: string
+  }>
+  stockByWarehouse: Array<{
+    warehouseId: string
+    warehouseName: string
+    totalProducts: number
+    totalQuantity: number
+  }>
+  stockByLocation: Array<{
+    locationId: string
+    locationName: string
+    warehouseName: string | null
+    totalProducts: number
+    totalQuantity: number
+  }>
+  pendingOperations: Array<{
+    type: string
+    id: string
+    number: string
+    status: string
+    location?: string
+    from?: string
+    to?: string
+    date: string
+  }>
+}
 
-    return {
-      totalProducts,
-      lowStockItems: 3, // visual flair
-      pendingReceipts,
-      pendingDeliveries,
-      pendingTransfers,
+interface DashboardResponse {
+  success: boolean
+  data: KPIData
+}
+
+const kpiCards = [
+  {
+    name: 'Total Products in Stock',
+    icon: Package,
+    color: 'bg-blue-500',
+    key: 'totalProductsInStock',
+  },
+  {
+    name: 'Low Stock Items',
+    icon: AlertTriangle,
+    color: 'bg-yellow-500',
+    key: 'lowStockItems',
+  },
+  {
+    name: 'Out of Stock Items',
+    icon: Minus,
+    color: 'bg-red-500',
+    key: 'outOfStockItems',
+  },
+  {
+    name: 'Pending Receipts',
+    icon: TrendingUp,
+    color: 'bg-green-500',
+    key: 'pendingReceipts',
+  },
+  {
+    name: 'Pending Deliveries',
+    icon: Truck,
+    color: 'bg-orange-500',
+    key: 'pendingDeliveries',
+  },
+  {
+    name: 'Pending Transfers',
+    icon: ArrowRightLeft,
+    color: 'bg-purple-500',
+    key: 'pendingTransfers',
+  },
+] as const
+
+export default function DashboardPage() {
+  const { data: dashboardData, isLoading, refetch } = useQuery<DashboardResponse>({
+    queryKey: ['dashboard'],
+    queryFn: async () => {
+      const res = await fetch('/api/dashboard')
+      return res.json()
+    },
+    refetchInterval: 30000,
+  })
+
+  const { on } = useRealtime()
+  const { kpis } = useDashboardUpdates()
+  const { latestAlert } = useAlertUpdates()
+
+  React.useEffect(() => {
+    const unsubscribe = on('dashboard.updated', () => {
+      refetch()
+    })
+    return unsubscribe
+  }, [on, refetch])
+
+  React.useEffect(() => {
+    if (latestAlert) {
+      refetch()
     }
-  } catch (error) {
-    // Fallback if local DB is offline during UI mockup demonstration
-    return {
-      totalProducts: 142,
-      lowStockItems: 3,
-      pendingReceipts: 5,
-      pendingDeliveries: 12,
-      pendingTransfers: 2,
-    }
+  }, [latestAlert, refetch])
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          {kpiCards.map((kpi) => (
+            <Card key={kpi.name}>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">{kpi.name}</p>
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted animate-pulse">
+                      <kpi.icon className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="animate-pulse space-y-4">
+              <div className="h-4 bg-muted rounded w-3/4" />
+              <div className="h-4 bg-muted rounded w-1/2" />
+              <div className="h-4 bg-muted rounded w-1/4" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
-}
 
-export default async function DashboardPage() {
-  const stats = await getDashboardStats()
+  const data = dashboardData?.data
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight mb-1">Overview</h2>
-          <p className="text-muted-foreground">Here&apos;s what&apos;s happening in your warehouse today.</p>
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground">Overview of your inventory operations</p>
         </div>
-        
-        {/* Dynamic Filters (Visual) */}
-        <div className="flex items-center space-x-2">
-          <select className="bg-background border border-border/50 text-sm rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary/50 outline-none transition-all">
-            <option>All Warehouses</option>
-            <option>Main HQ</option>
-          </select>
-          <select className="bg-background border border-border/50 text-sm rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary/50 outline-none transition-all">
-            <option>Last 7 Days</option>
-            <option>Last 30 Days</option>
-          </select>
-        </div>
+        <Button onClick={() => refetch()} variant="outline" size="sm">
+          <Loader2 className="mr-2 h-4 w-4" />
+          Refresh
+        </Button>
       </div>
 
-      {/* KPI Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <KpiCard 
-          title="Total Products" 
-          value={stats.totalProducts} 
-          icon={<Package className="text-blue-500" />}
-          gradient="from-blue-500/20 to-blue-500/0"
-        />
-        <KpiCard 
-          title="Low Stock" 
-          value={stats.lowStockItems} 
-          icon={<AlertTriangle className="text-orange-500" />}
-          gradient="from-orange-500/20 to-orange-500/0"
-          alert
-        />
-        <KpiCard 
-          title="Pending Receipts" 
-          value={stats.pendingReceipts} 
-          icon={<ArrowDownToLine className="text-emerald-500" />}
-          gradient="from-emerald-500/20 to-emerald-500/0"
-        />
-        <KpiCard 
-          title="Pending Deliveries" 
-          value={stats.pendingDeliveries} 
-          icon={<Truck className="text-purple-500" />}
-          gradient="from-purple-500/20 to-purple-500/0"
-        />
-        <KpiCard 
-          title="Scheduled Transfers" 
-          value={stats.pendingTransfers} 
-          icon={<ArrowRightLeft className="text-pink-500" />}
-          gradient="from-pink-500/20 to-pink-500/0"
-        />
+      {/* KPI Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        {kpiCards.map((kpi) => {
+          const value = data?.[kpi.key as keyof KPIData] ?? 0
+          return (
+            <Card key={kpi.name}>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">{kpi.name}</p>
+                    <p className="text-3xl font-bold">{formatNumber(value as number)}</p>
+                  </div>
+                  <div className={cn('flex h-12 w-12 items-center justify-center rounded-full', kpi.color)}>
+                    <kpi.icon className="h-6 w-6 text-white" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )
+        })}
       </div>
 
-      {/* Recent Activity / Chart Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 relative overflow-hidden rounded-2xl border border-border/50 bg-card/50 backdrop-blur-sm p-6 shadow-sm">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 blur-[80px] rounded-full pointer-events-none" />
-          <h3 className="font-semibold text-lg mb-6">Activity Timeline</h3>
-          
-          <div className="h-[300px] flex items-end justify-between gap-2 px-2">
-            {/* Mock Chart Bars */}
-            {[40, 70, 45, 90, 65, 85, 120].map((h, i) => (
-              <div key={i} className="w-full relative group">
-                <div 
-                  className="absolute bottom-0 w-full bg-gradient-to-t from-primary to-blue-400 rounded-t-sm opacity-80 group-hover:opacity-100 transition-opacity"
-                  style={{ height: `${(h / 120) * 100}%` }}
-                />
+      {/* Alerts Section */}
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* Low Stock Alerts */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-yellow-500" />
+              Low Stock Alerts
+            </CardTitle>
+            {(() => {
+              const lowStockCount = data?.lowStockAlerts?.length ?? 0
+              return (
+                <Badge variant={lowStockCount > 0 ? 'warning' : 'secondary'}>
+                  {lowStockCount}
+                </Badge>
+              )
+            })()}
+          </CardHeader>
+          <CardContent>
+            {data?.lowStockAlerts?.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">No low stock items</p>
+            ) : (
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {data?.lowStockAlerts?.map((alert) => (
+                  <div key={alert.productId} className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-100">
+                    <div>
+                      <p className="font-medium">{alert.productName}</p>
+                      <p className="text-sm text-muted-foreground">{alert.sku} • {alert.currentStock} {alert.unit} (Reorder: {alert.reorderLevel})</p>
+                    </div>
+                    <Badge variant="warning">LOW STOCK</Badge>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          <div className="flex justify-between mt-4 text-xs text-muted-foreground px-2">
-            <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
-          </div>
-        </div>
+            )}
+          </CardContent>
+        </Card>
 
-        {/* Quick Actions */}
-        <div className="rounded-2xl border border-border/50 bg-card/50 backdrop-blur-sm p-6 shadow-sm">
-          <h3 className="font-semibold text-lg mb-6">Quick Actions</h3>
-          <div className="space-y-3">
-            <ActionBtn icon={<ArrowDownToLine size={18}/>} label="Receive Goods" color="text-emerald-500" bg="bg-emerald-500/10" />
-            <ActionBtn icon={<Truck size={18}/>} label="Create Delivery" color="text-purple-500" bg="bg-purple-500/10" />
-            <ActionBtn icon={<ArrowRightLeft size={18}/>} label="Internal Transfer" color="text-pink-500" bg="bg-pink-500/10" />
-            <ActionBtn icon={<AlertTriangle size={18}/>} label="Stock Adjustment" color="text-orange-500" bg="bg-orange-500/10" />
-          </div>
-        </div>
+        {/* Out of Stock Alerts */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              Out of Stock
+            </CardTitle>
+            {(() => {
+              const outOfStockCount = data?.outOfStockAlerts?.length ?? 0
+              return (
+                <Badge variant={outOfStockCount > 0 ? 'destructive' : 'secondary'}>
+                  {outOfStockCount}
+                </Badge>
+              )
+            })()}
+          </CardHeader>
+          <CardContent>
+            {data?.outOfStockAlerts?.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">No out of stock items</p>
+            ) : (
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {data?.outOfStockAlerts?.map((alert) => (
+                  <div key={alert.productId} className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-100">
+                    <div>
+                      <p className="font-medium">{alert.productName}</p>
+                      <p className="text-sm text-muted-foreground">{alert.sku} • {alert.unit}</p>
+                    </div>
+                    <Badge variant="destructive">OUT OF STOCK</Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Recent Activity & Pending Operations */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* Recent Activity */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Inventory Activity</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {data?.recentActivity?.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">No recent activity</p>
+            ) : (
+              <div className="space-y-3">
+                {data?.recentActivity?.slice(0, 10).map((activity) => (
+                  <div key={activity.id} className="flex items-center justify-between py-2 border-b last:border-0">
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        'flex h-8 w-8 items-center justify-center rounded-full',
+                        activity.operationType === 'RECEIPT' && 'bg-green-100 text-green-600',
+                        activity.operationType === 'DELIVERY' && 'bg-red-100 text-red-600',
+                        activity.operationType === 'TRANSFER_IN' && 'bg-blue-100 text-blue-600',
+                        activity.operationType === 'TRANSFER_OUT' && 'bg-orange-100 text-orange-600',
+                        activity.operationType.startsWith('ADJUSTMENT') && 'bg-purple-100 text-purple-600',
+                      )}>
+                        {activity.quantityChange > 0 ? (
+                          <TrendingUp className="h-4 w-4" />
+                        ) : (
+                          <TrendingDown className="h-4 w-4" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">{activity.productName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {activity.documentNumber} • {activity.warehouse} / {activity.location}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className={cn(
+                        'font-medium text-sm',
+                        activity.quantityChange > 0 ? 'text-green-600' : 'text-red-600'
+                      )}>
+                        {activity.quantityChange > 0 ? '+' : ''}{formatNumber(activity.quantityChange)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{formatRelativeTime(activity.date)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Pending Operations */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Pending Operations</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {data?.pendingOperations?.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">No pending operations</p>
+            ) : (
+              <div className="space-y-3">
+                {data?.pendingOperations?.slice(0, 10).map((op) => (
+                  <div key={op.id} className="flex items-center justify-between py-2 border-b last:border-0">
+                    <div className="flex items-center gap-3">
+                      <Badge variant={
+                        op.type === 'RECEIPT' ? 'success' :
+                        op.type === 'DELIVERY' ? 'destructive' :
+                        'default'
+                      }>
+                        {op.type}
+                      </Badge>
+                      <div>
+                        <p className="font-medium text-sm">{op.number}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {op.from ? `${op.from} → ${op.to}` : op.location}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <Badge variant={
+                        op.status === 'WAITING' ? 'default' :
+                        op.status === 'READY' ? 'secondary' :
+                        'outline'
+                      }>
+                        {op.status}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Stock by Warehouse & Location */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Stock by Warehouse</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {data?.stockByWarehouse.map((w) => (
+                <div key={w.warehouseId} className="flex items-center justify-between py-2 border-b last:border-0">
+                  <div>
+                    <p className="font-medium">{w.warehouseName}</p>
+                    <p className="text-sm text-muted-foreground">{w.totalProducts} products</p>
+                  </div>
+                  <p className="font-medium">{formatNumber(w.totalQuantity)} units</p>
+                </div>
+              ))}
+              {data?.stockByWarehouse.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">No warehouse data</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Stock by Location</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {data?.stockByLocation.slice(0, 10).map((l) => (
+                <div key={l.locationId} className="flex items-center justify-between py-2 border-b last:border-0">
+                  <div>
+                    <p className="font-medium">{l.locationName}</p>
+                    <p className="text-sm text-muted-foreground">{l.warehouseName} • {l.totalProducts} products</p>
+                  </div>
+                  <p className="font-medium">{formatNumber(l.totalQuantity)} units</p>
+                </div>
+              ))}
+              {data?.stockByLocation.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">No location data</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
-  )
-}
-
-function KpiCard({ title, value, icon, gradient, alert }: { title: string, value: number | string, icon: React.ReactNode, gradient: string, alert?: boolean }) {
-  return (
-    <div className={`relative overflow-hidden rounded-2xl border border-border/50 bg-card/50 backdrop-blur-sm p-5 shadow-sm transition-all hover:shadow-md group ${alert ? 'border-orange-500/30' : ''}`}>
-      <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${gradient} blur-3xl opacity-50 group-hover:opacity-100 transition-opacity`} />
-      
-      <div className="flex justify-between items-start mb-4 relative z-10">
-        <p className="text-sm font-medium text-muted-foreground">{title}</p>
-        <div className="p-2 bg-background rounded-lg shadow-sm border border-border/50">
-          {icon}
-        </div>
-      </div>
-      <div className="relative z-10">
-        <h3 className="text-3xl font-bold tracking-tight">{value}</h3>
-      </div>
-    </div>
-  )
-}
-
-function ActionBtn({ icon, label, color, bg }: { icon: React.ReactNode, label: string, color: string, bg: string }) {
-  return (
-    <button className="w-full flex items-center p-3 rounded-xl border border-border/50 hover:bg-muted/50 transition-colors group">
-      <div className={`p-2 rounded-lg ${bg} ${color} mr-3 group-hover:scale-110 transition-transform`}>
-        {icon}
-      </div>
-      <span className="font-medium text-sm">{label}</span>
-    </button>
   )
 }

@@ -1,2 +1,11 @@
-import { NextResponse } from 'next/server';
-export async function GET(){return NextResponse.json({success:true,data:[],pagination:{page:1,limit:20,total:0,totalPages:1}})};export async function POST(){return NextResponse.json({success:true})};export async function PUT(){return NextResponse.json({success:true})};export async function DELETE(){return NextResponse.json({success:true})}
+// Socket.IO endpoint for Next.js
+// This is a placeholder - Socket.IO runs on a separate server
+
+import { NextRequest, NextResponse } from 'next/server'
+
+export async function GET(request: NextRequest) {
+  return NextResponse.json({ 
+    message: 'Socket.IO server runs separately. Use the custom server setup.',
+    websocketUrl: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  })
+}

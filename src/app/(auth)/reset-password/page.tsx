@@ -1,10 +1,12 @@
-import { Suspense } from 'react'
-import ResetPasswordForm from './reset-password-form'
+import { ResetPasswordForm } from './ResetPasswordForm'
 
-export default function ResetPasswordPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>}>
-      <ResetPasswordForm />
-    </Suspense>
-  )
+interface PageProps {
+  searchParams: Promise<{ email?: string }>
+}
+
+export default async function ResetPasswordPage({ searchParams }: PageProps) {
+  const params = await searchParams
+  const email = params.email || ''
+
+  return <ResetPasswordForm email={email} />
 }

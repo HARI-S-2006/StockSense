@@ -31,6 +31,7 @@ export const resetPasswordSchema = z.object({
   otp: z.string().length(6, 'OTP must be 6 digits'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string(),
+  oobCode: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'Passwords do not match',
   path: ['confirmPassword'],
@@ -207,5 +208,20 @@ export type DeliveryInput = z.infer<typeof deliverySchema>
 export type DeliveryUpdateInput = z.infer<typeof deliveryUpdateSchema>
 export type TransferInput = z.infer<typeof transferSchema>
 export type AdjustmentInput = z.infer<typeof adjustmentSchema>
+export const profileSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters'),
+  currentPassword: z.string().optional(),
+  newPassword: z.string().min(8, 'Password must be at least 8 characters').optional(),
+  confirmPassword: z.string().optional(),
+}).refine((data) => {
+  if (data.newPassword && !data.currentPassword) return false
+  if (data.newPassword && data.newPassword !== data.confirmPassword) return false
+  return true
+}, {
+  message: 'Password confirmation does not match or current password is missing',
+  path: ['confirmPassword'],
+})
+
 export type DashboardFilters = z.infer<typeof dashboardFiltersSchema>
 export type LedgerFilters = z.infer<typeof ledgerFiltersSchema>
+export type ProfileInput = z.infer<typeof profileSchema>

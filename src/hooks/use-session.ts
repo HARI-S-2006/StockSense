@@ -58,7 +58,6 @@ export const useSessionStore = create<SessionState>()(
   )
 )
 
-// React hook for components
 export function useSession() {
   const { session, token, isLoading, setSession, clearSession, setLoading, hasRole, isManager, isStaff } = useSessionStore()
 

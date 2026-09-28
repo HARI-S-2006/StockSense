@@ -1,2 +1,12 @@
-import { NextResponse } from 'next/server';
-export async function GET(){return NextResponse.json({success:true,data:[],pagination:{page:1,limit:20,total:0,totalPages:1}})};export async function POST(){return NextResponse.json({success:true})};export async function PUT(){return NextResponse.json({success:true})};export async function DELETE(){return NextResponse.json({success:true})}
+import { NextResponse } from 'next/server'
+import { getSession } from '@/lib/auth'
+
+export async function GET() {
+  const session = await getSession()
+  
+  if (!session) {
+    return NextResponse.json({ success: false, message: 'Not authenticated' }, { status: 401 })
+  }
+
+  return NextResponse.json({ success: true, data: session })
+}
